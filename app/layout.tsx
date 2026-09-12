@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "WHITE F.P.G — Showroom",
+  title: "WHITE F.P.G. — Showroom",
   description:
     "WHITE F.P.G — showroom digitale di grafica: cover, poster, loghi e opere visive.",
   metadataBase: new URL("https://white-fpg.example"),
   openGraph: {
-    title: "WHITE F.P.G — Showroom",
+    title: "WHITE F.P.G. — Showroom",
     description:
       "Showroom digitale di grafica: cover, poster, loghi e opere visive.",
     type: "website",
