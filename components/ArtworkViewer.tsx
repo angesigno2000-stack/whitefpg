@@ -88,6 +88,7 @@ export default function ArtworkViewer({
           }`}
           onClick={() => setZoomed((z) => !z)}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/img/${artwork.id}/preview`}
             alt={artwork.title}
