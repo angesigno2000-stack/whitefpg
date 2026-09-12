@@ -22,8 +22,6 @@ export default function ArtworkViewer({
   const index = artworks.findIndex((a) => a.slug === activeSlug);
   const artwork = artworks[index];
 
-  // Quando cambia l'opera visualizzata, riparti sempre dalla prima immagine
-  // della galleria.
   useEffect(() => {
     setActiveImage(0);
   }, [activeSlug]);
@@ -144,6 +142,14 @@ export default function ArtworkViewer({
               />
             </button>
           ))}
+        </div>
+      )}
+
+      {artwork.description && (
+        <div className="px-6 md:px-10 pb-4 max-w-3xl mx-auto text-center">
+          <p className="text-sm text-bone leading-relaxed">
+            {artwork.description}
+          </p>
         </div>
       )}
 
