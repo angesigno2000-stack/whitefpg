@@ -10,17 +10,21 @@ export type { Category, Artwork };
 const DATA_DIR = path.join(process.cwd(), "storage");
 const DB_PATH = path.join(DATA_DIR, "showroom.db");
 
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-// Singleton across hot reloads in dev
+// Singleton across hot reloads in dev; lazy-initialized so importing this
+// module (e.g. during `next build`'s page-data collection) never touches
+// the real database file on disk.
 const globalForDb = globalThis as unknown as { __wfpgDb?: Database.Database };
 
-export const db = globalForDb.__wfpgDb ?? new Database(DB_PATH);
-if (process.env.NODE_ENV !== "production") globalForDb.__wfpgDb = db;
+function ensureDb(): Database.Database {
+  if (globalForDb.__wfpgDb) return globalForDb.__wfpgDb;
 
-db.pragma("journal_mode = WAL");
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-db.exec(`
+  const instance = new Database(DB_PATH);
+  instance.pragma("journal_mode = WAL");
+  instance.pragma("busy_timeout = 10000");
+
+  instance.exec(`
 CREATE TABLE IF NOT EXISTS artworks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -45,6 +49,19 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   expiresAt TEXT NOT NULL
 );
 `);
+
+  globalForDb.__wfpgDb = instance;
+  if (process.env.NODE_ENV !== "production") globalForDb.__wfpgDb = instance;
+  return instance;
+}
+
+export const db: Database.Database = new Proxy({} as Database.Database, {
+  get(_target, prop, receiver) {
+    const real = ensureDb();
+    const value = Reflect.get(real, prop, real);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+}) as Database.Database;
 
 type Row = Omit<Artwork, "tags" | "featured" | "published"> & {
   tags: string;
