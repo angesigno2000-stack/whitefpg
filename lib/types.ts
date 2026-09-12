@@ -27,6 +27,7 @@ export interface Artwork {
   published: boolean;
   sortOrder: number;
   originalFile: string;
+  images: string[];
   width: number;
   height: number;
   dateAdded: string;
@@ -44,6 +45,8 @@ export interface PublicArtwork {
   featured: boolean;
   number: number;
   total: number;
+  image: string;
+  gallery: string[];
   width: number;
   height: number;
   dateAdded: string;

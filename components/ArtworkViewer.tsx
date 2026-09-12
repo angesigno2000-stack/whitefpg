@@ -18,8 +18,15 @@ export default function ArtworkViewer({
   onNavigate,
 }: ArtworkViewerProps) {
   const [zoomed, setZoomed] = useState(false);
+  const [activeImage, setActiveImage] = useState(0);
   const index = artworks.findIndex((a) => a.slug === activeSlug);
   const artwork = artworks[index];
+
+  // Quando cambia l'opera visualizzata, riparti sempre dalla prima immagine
+  // della galleria.
+  useEffect(() => {
+    setActiveImage(0);
+  }, [activeSlug]);
 
   const goPrev = useCallback(() => {
     if (index > 0) {
@@ -50,6 +57,11 @@ export default function ArtworkViewer({
   }, [onClose, goPrev, goNext]);
 
   if (!artwork) return null;
+
+  const mainImageSrc =
+    artwork.gallery && artwork.gallery.length > 0
+      ? artwork.gallery[activeImage] || artwork.gallery[0]
+      : `/api/img/${artwork.id}/preview`;
 
   return (
     <div
@@ -90,7 +102,7 @@ export default function ArtworkViewer({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/img/${artwork.id}/preview`}
+            src={mainImageSrc}
             alt={artwork.title}
             draggable={false}
             onContextMenu={(e) => e.preventDefault()}
@@ -108,6 +120,32 @@ export default function ArtworkViewer({
           &#8250;
         </button>
       </div>
+
+      {artwork.gallery && artwork.gallery.length > 1 && (
+        <div className="flex justify-center gap-2 px-6 pb-4">
+          {artwork.gallery.map((src, i) => (
+            <button
+              key={src + i}
+              onClick={() => setActiveImage(i)}
+              aria-label={`Mostra immagine ${i + 1}`}
+              className={`w-14 h-14 md:w-16 md:h-16 border overflow-hidden transition-colors ${
+                i === activeImage
+                  ? "border-bone"
+                  : "border-hairline hover:border-ash"
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt={`Miniatura ${i + 1}`}
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="px-6 md:px-10 py-6 flex items-baseline justify-between border-t border-hairline/60">
         <div>

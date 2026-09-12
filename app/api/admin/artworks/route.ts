@@ -19,7 +19,18 @@ export async function POST(req: Request) {
   }
 
   const form = await req.formData();
-  const file = form.get("file");
+
+  // Supporta sia il campo multiplo "files" (nuovo) sia il vecchio campo
+  // singolo "file", per non rompere eventuali client già esistenti.
+  const multiFiles = form.getAll("files").filter((f): f is File => f instanceof File);
+  const singleFile = form.get("file");
+  const files: File[] =
+    multiFiles.length > 0
+      ? multiFiles
+      : singleFile instanceof File
+      ? [singleFile]
+      : [];
+
   const title = String(form.get("title") || "").trim();
   const category = String(form.get("category") || "OTHER") as Category;
   const year = parseInt(String(form.get("year") || new Date().getFullYear()), 10);
@@ -28,7 +39,7 @@ export async function POST(req: Request) {
   const featured = String(form.get("featured") || "false") === "true";
   const published = String(form.get("published") || "false") === "true";
 
-  if (!(file instanceof File)) {
+  if (files.length === 0) {
     return NextResponse.json({ error: "File immagine mancante" }, { status: 400 });
   }
   if (!title) {
@@ -37,21 +48,32 @@ export async function POST(req: Request) {
   if (!CATEGORIES.includes(category)) {
     return NextResponse.json({ error: "Categoria non valida" }, { status: 400 });
   }
+
   const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
-  if (!allowedTypes.includes(file.type)) {
-    return NextResponse.json(
-      { error: "Formato non supportato. Usa PNG, JPG o WebP." },
-      { status: 400 }
-    );
-  }
-  if (file.size > 60 * 1024 * 1024) {
-    return NextResponse.json({ error: "File troppo grande (max 60MB)" }, { status: 400 });
+  for (const file of files) {
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: "Formato non supportato. Usa PNG, JPG o WebP." },
+        { status: 400 }
+      );
+    }
+    if (file.size > 60 * 1024 * 1024) {
+      return NextResponse.json({ error: "File troppo grande (max 60MB)" }, { status: 400 });
+    }
   }
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  // Salva tutti i file originali; il primo funge da copertina (originalFile)
+  // e determina anche width/height "principali" dell'opera.
+  const savedFiles: { storedName: string; width: number; height: number }[] = [];
+  for (const file of files) {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const saved = await saveOriginal(buffer, file.name);
+    savedFiles.push(saved);
+  }
 
-  const { storedName, width, height } = await saveOriginal(buffer, file.name);
+  const [cover, ...rest] = savedFiles;
+  const images = savedFiles.map((f) => f.storedName);
 
   const tags = tagsRaw
     .split(",")
@@ -66,9 +88,10 @@ export async function POST(req: Request) {
     tags,
     featured,
     published,
-    originalFile: storedName,
-    width,
-    height,
+    originalFile: cover.storedName,
+    images,
+    width: cover.width,
+    height: cover.height,
   });
 
   return NextResponse.json({ artwork }, { status: 201 });

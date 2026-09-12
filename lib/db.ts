@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS artworks (
   published INTEGER NOT NULL DEFAULT 0,
   sortOrder INTEGER NOT NULL DEFAULT 0,
   originalFile TEXT NOT NULL,
+  images TEXT NOT NULL DEFAULT '[]',
   width INTEGER NOT NULL DEFAULT 0,
   height INTEGER NOT NULL DEFAULT 0,
   dateAdded TEXT NOT NULL,
@@ -49,6 +50,18 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   expiresAt TEXT NOT NULL
 );
 `);
+
+  // Migrazione: se il DB esisteva già prima dell'introduzione di "images",
+  // la colonna non viene creata dal CREATE TABLE IF NOT EXISTS qui sopra.
+  const columns = instance
+    .prepare(`PRAGMA table_info(artworks)`)
+    .all() as { name: string }[];
+  const hasImages = columns.some((c) => c.name === "images");
+  if (!hasImages) {
+    instance.exec(
+      `ALTER TABLE artworks ADD COLUMN images TEXT NOT NULL DEFAULT '[]'`
+    );
+  }
 
   globalForDb.__wfpgDb = instance;
   if (process.env.NODE_ENV !== "production") globalForDb.__wfpgDb = instance;
@@ -63,16 +76,18 @@ export const db: Database.Database = new Proxy({} as Database.Database, {
   },
 }) as Database.Database;
 
-type Row = Omit<Artwork, "tags" | "featured" | "published"> & {
+type Row = Omit<Artwork, "tags" | "featured" | "published" | "images"> & {
   tags: string;
   featured: number;
   published: number;
+  images: string;
 };
 
 function rowToArtwork(row: Row): Artwork {
   return {
     ...row,
     tags: JSON.parse(row.tags || "[]"),
+    images: JSON.parse(row.images || "[]"),
     featured: !!row.featured,
     published: !!row.published,
   };
@@ -117,6 +132,7 @@ export interface CreateArtworkInput {
   featured: boolean;
   published: boolean;
   originalFile: string;
+  images: string[];
   width: number;
   height: number;
 }
@@ -140,6 +156,7 @@ export function createArtwork(input: CreateArtworkInput): Artwork {
     published: input.published,
     sortOrder: maxOrder.m + 1,
     originalFile: input.originalFile,
+    images: input.images,
     width: input.width,
     height: input.height,
     dateAdded: now,
@@ -148,11 +165,12 @@ export function createArtwork(input: CreateArtworkInput): Artwork {
 
   db.prepare(
     `INSERT INTO artworks
-      (id, title, slug, category, year, description, tags, featured, published, sortOrder, originalFile, width, height, dateAdded, updatedAt)
-     VALUES (@id, @title, @slug, @category, @year, @description, @tags, @featured, @published, @sortOrder, @originalFile, @width, @height, @dateAdded, @updatedAt)`
+      (id, title, slug, category, year, description, tags, featured, published, sortOrder, originalFile, images, width, height, dateAdded, updatedAt)
+     VALUES (@id, @title, @slug, @category, @year, @description, @tags, @featured, @published, @sortOrder, @originalFile, @images, @width, @height, @dateAdded, @updatedAt)`
   ).run({
     ...artwork,
     tags: JSON.stringify(artwork.tags),
+    images: JSON.stringify(artwork.images),
     featured: artwork.featured ? 1 : 0,
     published: artwork.published ? 1 : 0,
   });
@@ -169,6 +187,7 @@ export interface UpdateArtworkInput {
   featured?: boolean;
   published?: boolean;
   sortOrder?: number;
+  images?: string[];
 }
 
 export function updateArtwork(id: string, input: UpdateArtworkInput): Artwork | null {
@@ -179,16 +198,18 @@ export function updateArtwork(id: string, input: UpdateArtworkInput): Artwork | 
     ...existing,
     ...input,
     tags: input.tags ?? existing.tags,
+    images: input.images ?? existing.images,
     updatedAt: new Date().toISOString(),
   };
 
   db.prepare(
     `UPDATE artworks SET title=@title, category=@category, year=@year, description=@description,
-      tags=@tags, featured=@featured, published=@published, sortOrder=@sortOrder, updatedAt=@updatedAt
+      tags=@tags, featured=@featured, published=@published, sortOrder=@sortOrder, images=@images, updatedAt=@updatedAt
      WHERE id=@id`
   ).run({
     ...merged,
     tags: JSON.stringify(merged.tags),
+    images: JSON.stringify(merged.images),
     featured: merged.featured ? 1 : 0,
     published: merged.published ? 1 : 0,
   });
@@ -200,7 +221,8 @@ export function deleteArtwork(id: string): void {
   db.prepare(`DELETE FROM artworks WHERE id = ?`).run(id);
 }
 
-export function reorderArtworks(orderedIds: string[]): void {
+export function reorderArtworks(orderedIds: string[]): void
+ {
   const stmt = db.prepare(`UPDATE artworks SET sortOrder = ? WHERE id = ?`);
   const tx = db.transaction((ids: string[]) => {
     ids.forEach((id, index) => stmt.run(index, id));

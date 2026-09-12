@@ -12,6 +12,7 @@ for (const dir of [ORIGINALS_DIR, CACHE_DIR]) {
 }
 
 export type Variant = "thumb" | "preview" | "admin-preview";
+export type DetailIndex = 0 | 1 | 2;
 
 const VARIANT_CONFIG: Record<
   Variant,
@@ -26,6 +27,15 @@ const VARIANT_CONFIG: Record<
 };
 
 const WATERMARK_TEXT = "WHITE F.P.G \u00A9 2026";
+
+// Zone di ritaglio per i 3 "dettagli" auto-generati quando c'è una sola foto:
+// alto-sinistra, centro, basso-destra, ciascuna al 55% delle dimensioni originali.
+const DETAIL_ZONES: Array<{ anchorX: number; anchorY: number }> = [
+  { anchorX: 0, anchorY: 0 },
+  { anchorX: 0.5, anchorY: 0.5 },
+  { anchorX: 1, anchorY: 1 },
+];
+const DETAIL_CROP_RATIO = 0.55;
 
 function buildWatermarkSvg(width: number, height: number): Buffer {
   // Pattern ripetuto, discreto, ruotato leggermente: difficile da rimuovere in modo pulito
@@ -57,8 +67,20 @@ function buildWatermarkSvg(width: number, height: number): Buffer {
   return Buffer.from(svg);
 }
 
-function cachePath(id: string, variant: Variant, ext: string) {
-  return path.join(CACHE_DIR, `${id}-${variant}.${ext}`);
+function cachePath(id: string, suffix: string, ext: string) {
+  return path.join(CACHE_DIR, `${id}-${suffix}.${ext}`);
+}
+
+async function applyWatermarkIfNeeded(
+  pipelineInput: Buffer,
+  config: { watermark: boolean }
+): Promise<Buffer> {
+  if (!config.watermark) return pipelineInput;
+
+  const meta = await sharp(pipelineInput).toBuffer({ resolveWithObject: true });
+  const { width, height } = meta.info;
+  const svg = buildWatermarkSvg(width, height);
+  return sharp(meta.data).composite([{ input: svg, top: 0, left: 0 }]).toBuffer();
 }
 
 export async function ensureVariant(
@@ -99,6 +121,58 @@ export async function ensureVariant(
   return { buffer, contentType: "image/webp" };
 }
 
+// Genera un "dettaglio" zoomato ritagliando una delle 3 zone predefinite
+// dall'unica foto disponibile, così la galleria non è mai vuota.
+export async function ensureDetailVariant(
+  id: string,
+  originalFile: string,
+  detailIndex: DetailIndex,
+  variant: Variant = "preview"
+): Promise<{ buffer: Buffer; contentType: string }> {
+  const suffix = `detail${detailIndex}-${variant}`;
+  const outPath = cachePath(id, suffix, "webp");
+
+  if (fsSync.existsSync(outPath)) {
+    const buffer = await fs.readFile(outPath);
+    return { buffer, contentType: "image/webp" };
+  }
+
+  const originalPath = path.join(ORIGINALS_DIR, originalFile);
+  const config = VARIANT_CONFIG[variant];
+  const zone = DETAIL_ZONES[detailIndex];
+
+  const base = sharp(originalPath).rotate();
+  const meta = await base.metadata();
+  const fullWidth = meta.width || 1;
+  const fullHeight = meta.height || 1;
+
+  const cropWidth = Math.round(fullWidth * DETAIL_CROP_RATIO);
+  const cropHeight = Math.round(fullHeight * DETAIL_CROP_RATIO);
+  const left = Math.min(
+    fullWidth - cropWidth,
+    Math.max(0, Math.round((fullWidth - cropWidth) * zone.anchorX))
+  );
+  const top = Math.min(
+    fullHeight - cropHeight,
+    Math.max(0, Math.round((fullHeight - cropHeight) * zone.anchorY))
+  );
+
+  const croppedBuffer = await sharp(originalPath)
+    .rotate()
+    .extract({ left, top, width: cropWidth, height: cropHeight })
+    .resize({ width: config.width, withoutEnlargement: true })
+    .toBuffer();
+
+  const finalBuffer = await applyWatermarkIfNeeded(croppedBuffer, config);
+
+  const buffer = await sharp(finalBuffer)
+    .webp({ quality: config.quality })
+    .toBuffer();
+  await fs.writeFile(outPath, buffer);
+
+  return { buffer, contentType: "image/webp" };
+}
+
 export async function saveOriginal(
   fileBuffer: Buffer,
   filename: string
@@ -126,5 +200,11 @@ export async function deleteOriginalAndCache(id: string, originalFile: string) {
   for (const variant of Object.keys(VARIANT_CONFIG) as Variant[]) {
     const p = cachePath(id, variant, "webp");
     if (fsSync.existsSync(p)) await fs.unlink(p);
+  }
+  for (let i = 0; i < 3; i++) {
+    for (const variant of Object.keys(VARIANT_CONFIG) as Variant[]) {
+      const p = cachePath(id, `detail${i}-${variant}`, "webp");
+      if (fsSync.existsSync(p)) await fs.unlink(p);
+    }
   }
 }

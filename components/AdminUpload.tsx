@@ -16,16 +16,16 @@ export default function AdminUpload({ onUploaded }: AdminUploadProps) {
   const [tags, setTags] = useState("");
   const [featured, setFeatured] = useState(false);
   const [published, setPublished] = useState(true);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPreview(URL.createObjectURL(file));
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setPreviews(Array.from(files).map((f) => URL.createObjectURL(f)));
     } else {
-      setPreview(null);
+      setPreviews([]);
     }
   }
 
@@ -37,16 +37,16 @@ export default function AdminUpload({ onUploaded }: AdminUploadProps) {
     setTags("");
     setFeatured(false);
     setPublished(true);
-    setPreview(null);
+    setPreviews([]);
     if (fileRef.current) fileRef.current.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const file = fileRef.current?.files?.[0];
-    if (!file) {
-      setError("Seleziona un file immagine.");
+    const files = fileRef.current?.files;
+    if (!files || files.length === 0) {
+      setError("Seleziona almeno un file immagine.");
       return;
     }
     if (!title.trim()) {
@@ -55,7 +55,7 @@ export default function AdminUpload({ onUploaded }: AdminUploadProps) {
     }
 
     const form = new FormData();
-    form.append("file", file);
+    Array.from(files).forEach((file) => form.append("files", file));
     form.append("title", title);
     form.append("category", category);
     form.append("year", String(year));
@@ -92,15 +92,20 @@ export default function AdminUpload({ onUploaded }: AdminUploadProps) {
       <div className="space-y-4">
         <div>
           <label className="block text-xs tracking-wider2 text-ash mb-2">
-            FILE (PNG / JPG / WEBP)
+            FILE (PNG / JPG / WEBP) — puoi selezionarne più di uno
           </label>
           <input
             ref={fileRef}
             type="file"
             accept="image/png,image/jpeg,image/webp"
+            multiple
             onChange={handleFileChange}
             className="w-full text-sm text-bone file:mr-4 file:border file:border-hairline file:bg-transparent file:text-bone file:px-3 file:py-1.5 file:text-xs file:tracking-wider2"
           />
+          <p className="text-[10px] tracking-wider2 text-ash mt-2">
+            Piu foto: entrano tutte in galleria. Una sola foto: la galleria
+            mostrera 3 dettagli zoomati generati automaticamente.
+          </p>
         </div>
 
         <div>
@@ -189,13 +194,23 @@ export default function AdminUpload({ onUploaded }: AdminUploadProps) {
           </label>
         </div>
 
-        {preview && (
+        {previews.length > 0 && (
           <div className="border border-hairline p-2">
             <p className="text-[10px] tracking-wider2 text-ash mb-2">
-              ANTEPRIMA LOCALE (non ancora protetta/watermarkata)
+              ANTEPRIMA LOCALE ({previews.length} file, non ancora
+              protetta/watermarkata)
             </p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="Anteprima" className="max-h-40 w-auto" />
+            <div className="flex flex-wrap gap-2">
+              {previews.map((src, idx) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={idx}
+                  src={src}
+                  alt={`Anteprima ${idx + 1}`}
+                  className="max-h-40 w-auto"
+                />
+              ))}
+            </div>
           </div>
         )}
 
