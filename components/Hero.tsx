@@ -13,7 +13,7 @@ export default function Hero() {
       />
 
       <div className="relative z-10 flex items-center justify-between px-6 md:px-12 pt-8">
-        <span className="text-xs tracking-wider2 text-ash">WHITE F.P.G</span>
+        <span className="text-xs tracking-wider2 text-ash">WHITE F.P.G.</span>
         <nav className="text-xs tracking-wider2 text-ash">
           <Link href="/showroom" className="hover:text-bone transition-colors">
             Showroom
@@ -25,7 +25,7 @@ export default function Hero() {
         <h1 className="fpg-hero-reveal font-sans font-bold leading-[0.86] tracking-tightest text-bone select-none text-[19vw] md:text-[13vw]">
           WHITE
           <br />
-          F.P.G
+          F.P.G.
         </h1>
       </div>
 
