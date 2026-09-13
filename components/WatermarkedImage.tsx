@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -39,11 +40,15 @@ export default function WatermarkedImage({
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
         onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        ref={(img) => {
+          if (img && img.complete) setLoaded(true);
+        }}
         className={`protected-image w-full h-full object-cover transition-opacity duration-700 ease-cinematic ${
           loaded ? "opacity-100" : "opacity-0"
         } ${className}`}
       />
-      {!loaded && <div className="absolute inset-0 bg-charcoal animate-pulse" />}
+      {!loaded && <div className="absolute inset-0 bg-charcoal animate-pulse pointer-events-none" />}
       {/* scudo trasparente: assorbe long-press / drag senza bloccare lo scroll */}
       <div
         className="protected-image-shield"
