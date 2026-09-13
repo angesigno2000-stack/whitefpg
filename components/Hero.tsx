@@ -13,7 +13,7 @@ export default function Hero() {
       />
 
       <div className="relative z-10 flex items-center justify-between px-6 md:px-12 pt-8">
-        <span className="text-xs tracking-wider2 text-ash">WHITE F.P.G.</span>
+      <img src="/logo.png" alt="White F.P.G." className="h-10 md:h-14 w-auto" />
         <nav className="text-xs tracking-wider2 text-ash">
           <Link href="/showroom" className="hover:text-bone transition-colors">
             Showroom

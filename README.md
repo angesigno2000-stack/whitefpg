@@ -145,4 +145,4 @@ sostituiti `storage/originals` con uno storage oggetti e SQLite con un
 database gestito, per i motivi spiegati sopra.
 
 Variabili d'ambiente richieste in produzione: `ADMIN_PASSWORD_HASH`,
-`ADMIN_SESSION_SECRET` (vedi `.env.example`).
+`ADMIN_SESSION_SECRET` (vedi `.env.example`). 

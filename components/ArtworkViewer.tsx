@@ -82,68 +82,71 @@ export default function ArtworkViewer({
         </button>
       </div>
 
-      <div className="relative flex-1 flex items-center justify-center px-4 md:px-16 overflow-hidden">
-        <button
-          onClick={goPrev}
-          disabled={index === 0}
-          aria-label="Opera precedente"
-          className="absolute left-2 md:left-6 z-10 text-bone/60 hover:text-bone disabled:opacity-0 transition-opacity text-3xl px-3 py-6"
-        >
-          &#8249;
-        </button>
+     
+<div className="relative flex-1 min-h-0 flex flex-row items-stretch justify-center px-4 md:px-16 overflow-hidden gap-4 max-w-6xl mx-auto w-full">
+<div className="relative flex-1 min-h-0 h-full flex items-center justify-center overflow-hidden">
+          <button
+            onClick={goPrev}
+            disabled={index === 0}
+            aria-label="Opera precedente"
+            className="absolute left-2 md:left-6 z-10 text-bone/60 hover:text-bone disabled:opacity-0 transition-opacity text-3xl px-3 py-6"
+          >
+            &#8249;
+          </button>
 
-        <div
-          className={`max-h-full max-w-full transition-transform duration-500 ease-cinematic cursor-zoom-in ${
-            zoomed ? "scale-150 cursor-zoom-out" : "scale-100"
-          }`}
-          onClick={() => setZoomed((z) => !z)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={mainImageSrc}
-            alt={artwork.title}
-            draggable={false}
-            onContextMenu={(e) => e.preventDefault()}
-            onDragStart={(e) => e.preventDefault()}
-            className="protected-image max-h-[70vh] md:max-h-[78vh] w-auto object-contain select-none"
-          />
+          <div
+     className={`h-full max-h-full max-w-full transition-transform duration-500 ease-cinematic cursor-zoom-in ${
+              zoomed ? "scale-150 cursor-zoom-out" : "scale-100"
+            }`}
+            onClick={() => setZoomed((z) => !z)}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mainImageSrc}
+              alt={artwork.title}
+              draggable={false}
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+              className="protected-image max-h-full max-w-full w-auto object-contain select-none"
+            />
+          </div>
+
+          <button
+            onClick={goNext}
+            disabled={index === artworks.length - 1}
+            aria-label="Opera successiva"
+            className="absolute right-2 md:right-6 z-10 text-bone/60 hover:text-bone disabled:opacity-0 transition-opacity text-3xl px-3 py-6"
+          >
+            &#8250;
+          </button>
         </div>
 
-        <button
-          onClick={goNext}
-          disabled={index === artworks.length - 1}
-          aria-label="Opera successiva"
-          className="absolute right-2 md:right-6 z-10 text-bone/60 hover:text-bone disabled:opacity-0 transition-opacity text-3xl px-3 py-6"
-        >
-          &#8250;
-        </button>
+        {artwork.gallery && artwork.gallery.length > 1 && (
+         <div className="flex flex-col gap-2 overflow-y-auto py-2 pr-1 w-16 md:w-20 shrink-0">
+            {artwork.gallery.map((src, i) => (
+              <button
+                key={src + i}
+                onClick={() => setActiveImage(i)}
+                aria-label={`Mostra immagine ${i + 1}`}
+                className={`w-14 h-14 md:w-16 md:h-16 shrink-0 border overflow-hidden transition-colors ${
+                  i === activeImage
+                    ? "border-bone"
+                    : "border-hairline hover:border-ash"
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={`Miniatura ${i + 1}`}
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-
-      {artwork.gallery && artwork.gallery.length > 1 && (
-        <div className="flex justify-center gap-2 px-6 pb-4">
-          {artwork.gallery.map((src, i) => (
-            <button
-              key={src + i}
-              onClick={() => setActiveImage(i)}
-              aria-label={`Mostra immagine ${i + 1}`}
-              className={`w-14 h-14 md:w-16 md:h-16 border overflow-hidden transition-colors ${
-                i === activeImage
-                  ? "border-bone"
-                  : "border-hairline hover:border-ash"
-              }`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={src}
-                alt={`Miniatura ${i + 1}`}
-                draggable={false}
-                onContextMenu={(e) => e.preventDefault()}
-                className="w-full h-full object-cover"
-              />
-            </button>
-          ))}
-        </div>
-      )}
 
       {artwork.description && (
         <div className="px-6 md:px-10 pb-4 max-w-3xl mx-auto text-center">

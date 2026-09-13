@@ -14,7 +14,10 @@ export default function HomePage() {
       <Hero />
       <FeaturedStrip artworks={picks} />
       <footer className="px-6 md:px-12 py-10 flex items-center justify-between text-xs text-ash tracking-wider2">
-        <span>WHITE F.P.G &copy; 2026</span>
+       <span className="flex items-center gap-2">
+  <img src="/logo.png" alt="" className="h-5 w-auto" />
+  WHITE F.P.G &copy; 2026
+</span>
         <span>{all.length} opere in archivio</span>
       </footer>
     </main>
